@@ -16,7 +16,7 @@ const btn = document.querySelector(".btn");
 
 btn.addEventListener("click", (e) => {
   const div = document.querySelector(".container");
-  // window.open("https://www.youtube.com/watch?v=dQw4w9WgXcQ", "_blank");
+  window.open("https://www.youtube.com/watch?v=dQw4w9WgXcQ", "_blank");
   const gitHubDiv = document.createElement("div");
   gitHubDiv.classList.add("github");
   div.appendChild(gitHubDiv);
