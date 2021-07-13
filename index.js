@@ -43,7 +43,7 @@ btn.addEventListener("click", (e) => {
                     const link = document.createElement("a");
                     link.classList.add("my-3");
                     link.innerHTML = `${repo["name"]} <br/>`;
-                    link.href = repo["html_link"];
+                    link.href = repo["html_url"];
                     github.appendChild(link);
                   });
                 })
