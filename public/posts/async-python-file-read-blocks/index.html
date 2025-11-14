@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Your async file I/O code will always block in Python. | Neeraj Writes</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/">Home</a></li>
+      
+      <li><a href="/about/">About</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">Your async file I/O code will always block in Python.</span></h1>
+
+<h2 class="date">2025/11/14</h2>
+</div>
+
+<main>
+<p>If I were to give you this piece of Python code and ask you if the <code>f.read()</code> part will block the event loop or not, what will be your answer?</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#f92672">import</span> asyncio
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">main</span>():
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">with</span> open(<span style="color:#e6db74">&#34;a.txt&#34;</span>, <span style="color:#e6db74">&#34;r&#34;</span>) <span style="color:#66d9ef">as</span> f:
+</span></span><span style="display:flex;"><span>        data <span style="color:#f92672">=</span> f<span style="color:#f92672">.</span>read()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>asyncio<span style="color:#f92672">.</span>run(main())
+</span></span></code></pre></div><p><strong>Short answer:</strong> It&rsquo;s blocking.</p>
+<p><strong>Long answer:</strong></p>
+<p>Almost everyone thinks that file I/O by default is async in nature. We think that any type of I/O operation by default is non-blocking. Meaning that while the file is being read, we can jump to another task, and when the file is fully read, we will come back to it.</p>
+<p>The <code>read()</code> function itself is a synchronous function. It does not support async file reading. It does not return any <code>future</code> which can be awaited.</p>
+<p>How to make it, ahem, &ldquo;async&rdquo;?</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#f92672">import</span> asyncio
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">main</span>():
+</span></span><span style="display:flex;"><span>    data <span style="color:#f92672">=</span> <span style="color:#66d9ef">await</span> asyncio<span style="color:#f92672">.</span>to_thread(read_file)
+</span></span><span style="display:flex;"><span>    print(data)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">read_file</span>():
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">with</span> open(<span style="color:#e6db74">&#34;a.txt&#34;</span>, <span style="color:#e6db74">&#34;r&#34;</span>) <span style="color:#66d9ef">as</span> f:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> f<span style="color:#f92672">.</span>read()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>asyncio<span style="color:#f92672">.</span>run(main())
+</span></span></code></pre></div><p>But wait, that&rsquo;s not truly async. I am creating another thread and offloading the <code>read</code> task to another thread.</p>
+<p>Well, the truth is file I/O in most runtimes is made async this way. Node.js uses the same trick. It just asks <code>libuv</code> to offload the file reading task to another thread.</p>
+<p><a href="https://github.com/Tinche/aiofiles">Aiofiles</a>, a Python library for making file I/O async, also does the same thing. It offloads the task to a threadpool.</p>
+<p>The reason is that the <code>read()</code> syscall (used by <code>f.read()</code>) in *nix systems is synchronous by design. It blocks the calling thread until data is available, whether from disk or cache.</p>
+<p>Is there any other kernel API that enables us to make file reading truly async?</p>
+<p>Yes, there is.</p>
+<p><a href="https://man7.org/linux/man-pages/man7/io_uring.7.html">io_uring</a> is a kernel interface for async I/O. Then, why is it not used?</p>
+<ol>
+<li>Runtimes targeting cross-platform compatibility need fallback implementation anyway as <code>io_uring</code> is only avialable for linux version <code>5.1+</code>. Meaning two code paths will need to be implemented.</li>
+<li>Thread pool solution just works. It&rsquo;s simple, portable, and performs well for most use cases.</li>
+</ol>
+
+</main>
+
+  <footer>
+  
+  
+  </footer>
+  </body>
+</html>
+
