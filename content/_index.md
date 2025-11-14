@@ -1,6 +1,6 @@
 +++
 date = '2025-11-14T05:44:45Z'
-draft = true
+draft = false
 title = 'Home'
 url = '/'
 +++
